@@ -1,7 +1,29 @@
-name: Update dashboard data (disabled)
+# Disabled in 0.8.1 to stop scheduled npm failures.
+# Re-enable only after replacing npm install based updater with a stable data-sync flow.
+
+name: Update dashboard data
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *"
 
-# Disabled in 0.7.0 because scheduled npm installs were failing in GitHub Actions.
-# Re-enable later after replacing the updater with a no-install or npm-ci-safe workflow.
+permissions:
+  contents: write
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run update:data
+      - run: npm run check:data
+      - name: Commit updated data
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update WC26 dashboard data"
+          file_pattern: public/data/*.json
