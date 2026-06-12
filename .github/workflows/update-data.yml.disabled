@@ -1,0 +1,7 @@
+name: Update dashboard data (disabled)
+
+on:
+  workflow_dispatch:
+
+# Disabled in 0.7.0 because scheduled npm installs were failing in GitHub Actions.
+# Re-enable later after replacing the updater with a no-install or npm-ci-safe workflow.

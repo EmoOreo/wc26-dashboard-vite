@@ -1,1 +1,1 @@
-Upgrade dashboard to 0.6.0 Bracket and Qualification Tracker
+Upgrade dashboard to 0.7.0 Live Match Center and Tournament Intelligence
