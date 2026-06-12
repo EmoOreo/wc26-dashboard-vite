@@ -12,3 +12,11 @@ This repo includes a prebuilt `dist/` folder. GitHub Pages deploys that folder u
 npm install
 npm run build
 ```
+
+
+## 0.6.0 Tournament Intelligence
+- Bracket tab with projected Round of 32 placeholders
+- Qualification status chips on standings and team pages
+- Best third-place tracker
+- Tournament progress banner
+- Team scenario notes

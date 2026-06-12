@@ -1,6 +1,8 @@
 import './styles.css';
 
 const STORAGE_KEY = 'wc26_favorites_v1';
+const GROUP_STAGE_MATCHES = 72;
+const TOTAL_TOURNAMENT_MATCHES = 104;
 
 const state = {
   tab: location.hash.replace('#', '') || 'overview',
@@ -14,7 +16,7 @@ const state = {
 };
 
 const app = document.querySelector('#app');
-const navTabs = ['overview', 'schedule', 'standings', 'groups', 'teams', 'venues'];
+const navTabs = ['overview', 'schedule', 'standings', 'groups', 'teams', 'venues', 'bracket'];
 
 async function loadJson(path) {
   const response = await fetch(`./data/${path}`);
@@ -38,13 +40,12 @@ function tournamentToday() { return new Date('2026-06-11T12:00:00Z'); }
 function startOfDay(date) { const d = new Date(date); d.setHours(0,0,0,0); return d; }
 function sameDay(iso, date) { return startOfDay(new Date(iso)).getTime() === startOfDay(date).getTime(); }
 function addDays(date, days) { const d = new Date(date); d.setDate(d.getDate() + days); return d; }
+function percent(n, d) { return d ? Math.round((n / d) * 100) : 0; }
 
 function formatDate(iso) {
   return new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(iso));
 }
-function dayKey(iso) {
-  return new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date(iso));
-}
+function dayKey(iso) { return new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date(iso)); }
 function countdownLabel(iso) {
   const diff = new Date(iso) - tournamentToday();
   if (diff <= 0) return 'Started';
@@ -64,12 +65,7 @@ function resultBadge(match) {
   return `<span class="badge upcoming">${countdownLabel(match.kickoff)}</span>`;
 }
 function getTeam(name) { return state.data.teams.find(t => t.name === name) || { name, flag: '🏳️', group: '?' }; }
-function teamStanding(name) {
-  const team = getTeam(name);
-  const rows = buildStandings(state.data.matches, state.data.teams)[team.group] || [];
-  const index = rows.findIndex(r => r.team === name);
-  return { row: rows[index], rank: index + 1, rows };
-}
+function groupLetters() { return [...new Set(state.data.teams.map(t => t.group))].sort(); }
 function teamMatches(name) { return state.data.matches.filter(m => m.home === name || m.away === name).sort((a,b)=>new Date(a.kickoff)-new Date(b.kickoff)); }
 function groupTeams(group) { return state.data.teams.filter(t => t.group === group).sort((a,b)=>a.name.localeCompare(b.name)); }
 function groupMatches(group) { return state.data.matches.filter(m => m.group === group).sort((a,b)=>new Date(a.kickoff)-new Date(b.kickoff)); }
@@ -105,6 +101,68 @@ function buildStandings(matches, teams) {
   return sorted;
 }
 
+function thirdPlaceTable(tables) {
+  return Object.values(tables)
+    .map(rows => rows[2])
+    .filter(Boolean)
+    .sort((a, b) => b.points - a.points || b.gd - a.gd || b.gf - a.gf || a.team.localeCompare(b.team))
+    .map((row, index) => ({ ...row, thirdRank: index + 1, projectedAdvance: index < 8 }));
+}
+
+function qualificationStatus(teamName) {
+  const tables = buildStandings(state.data.matches, state.data.teams);
+  const team = getTeam(teamName);
+  const rows = tables[team.group] || [];
+  const row = rows.find(r => r.team === teamName);
+  const rank = rows.findIndex(r => r.team === teamName) + 1;
+  const played = row?.played ?? 0;
+  const third = thirdPlaceTable(tables).find(r => r.team === teamName);
+  if (played >= 3 && (rank <= 2 || third?.projectedAdvance)) return { key: 'qualified', label: 'Qualified', icon: '🟢' };
+  if (played >= 3 && rank > 3 && !third?.projectedAdvance) return { key: 'eliminated', label: 'Eliminated', icon: '🔴' };
+  if (rank <= 2) return { key: 'projected', label: 'Projected qualified', icon: '🟢' };
+  if (rank === 3) return { key: 'third', label: third?.projectedAdvance ? 'Best-third watch' : 'Third-place bubble', icon: '🟡' };
+  return { key: 'contention', label: 'In contention', icon: '🟡' };
+}
+
+function teamStanding(name) {
+  const team = getTeam(name);
+  const rows = buildStandings(state.data.matches, state.data.teams)[team.group] || [];
+  const index = rows.findIndex(r => r.team === name);
+  return { row: rows[index], rank: index + 1, rows };
+}
+
+function bracketSlots() {
+  const tables = buildStandings(state.data.matches, state.data.teams);
+  const thirds = thirdPlaceTable(tables).filter(r => r.projectedAdvance);
+  const groupWinner = g => tables[g]?.[0]?.team || `Winner Group ${g}`;
+  const groupRunner = g => tables[g]?.[1]?.team || `Runner-up Group ${g}`;
+  const third = n => thirds[n - 1]?.team || `Best 3rd #${n}`;
+  return [
+    [groupWinner('A'), third(8)], [groupWinner('B'), groupRunner('C')], [groupWinner('C'), third(7)], [groupWinner('D'), groupRunner('E')],
+    [groupWinner('E'), third(6)], [groupWinner('F'), groupRunner('G')], [groupWinner('G'), third(5)], [groupWinner('H'), groupRunner('I')],
+    [groupWinner('I'), third(4)], [groupWinner('J'), groupRunner('K')], [groupWinner('K'), third(3)], [groupWinner('L'), groupRunner('A')],
+    [groupRunner('B'), groupRunner('D')], [groupRunner('F'), third(2)], [groupRunner('H'), groupRunner('J')], [groupRunner('L'), third(1)]
+  ];
+}
+
+function scenarioNotes(teamName) {
+  const { row, rank } = teamStanding(teamName);
+  const team = getTeam(teamName);
+  const remaining = teamMatches(teamName).filter(m => m.status !== 'finished');
+  const next = remaining[0];
+  if (!next) return ['Group-stage schedule complete in loaded data.', 'Final status depends on full group and best-third table.'];
+  const opponent = next.home === teamName ? next.away : next.home;
+  const base = row?.points ?? 0;
+  const lead = rank <= 2 ? 'currently in an automatic advancement position' : rank === 3 ? 'currently on the best-third watchlist' : 'currently needs points to climb the table';
+  return [
+    `Next: ${teamName} vs ${opponent} in Group ${team.group}.`,
+    `Win: moves to ${base + 3} pts and likely strengthens qualification odds.`,
+    `Draw: moves to ${base + 1} pts and keeps ${teamName} in contention.`,
+    `Loss: remains on ${base} pts; advancement depends on the rest of Group ${team.group} and best-third ranking.`,
+    `Current read: ${teamName} is ${lead}.`
+  ];
+}
+
 function route(tab, extra = {}) { state.tab = tab; Object.assign(state, extra); history.pushState(null, '', `#${tab}`); render(); }
 window.addEventListener('popstate', () => { state.tab = location.hash.replace('#', '') || 'overview'; render(); });
 
@@ -129,19 +187,27 @@ function overview() {
   const today = matches.filter(m => sameDay(m.kickoff, now)).sort((a,b) => new Date(a.kickoff) - new Date(b.kickoff));
   const tomorrow = matches.filter(m => sameDay(m.kickoff, addDays(now, 1))).sort((a,b) => new Date(a.kickoff) - new Date(b.kickoff));
   const featured = live[0] || upcoming[0] || finished[0];
-  const standings = buildStandings(matches, teams);
+  const tables = buildStandings(matches, teams);
   const favMatches = favoriteMatches().slice(0, 4);
+  const played = matches.filter(m => m.status === 'finished').length;
 
   return `
+    <section class="progress-banner card">
+      <div><strong>${played}/${TOTAL_TOURNAMENT_MATCHES}</strong><span>matches played</span></div>
+      <div><strong>${percent(played, GROUP_STAGE_MATCHES)}%</strong><span>group stage progress</span></div>
+      <div><strong>${thirdPlaceTable(tables).filter(t => t.projectedAdvance).length}/8</strong><span>best-third slots tracked</span></div>
+      <button class="secondary small" data-action="bracket">Open bracket intelligence</button>
+    </section>
+
     <section class="home-hero card">
       <div>
-        <div class="eyebrow">Match Center</div>
-        <h2>Follow the tournament by day, group, team, and venue.</h2>
-        <p>A cleaner dashboard hub with pinned favorites, today/tomorrow match windows, dedicated group pages, venue pages, computed standings, and match countdown labels.</p>
+        <div class="eyebrow">Tournament Intelligence</div>
+        <h2>Follow the tournament by day, group, team, venue, and qualification path.</h2>
+        <p>Now includes projected qualifiers, best third-place ranking, Round of 32 placeholders, and team scenario notes.</p>
         <div class="hero-actions">
-          <button class="primary" data-action="schedule">Open schedule</button>
+          <button class="primary" data-action="bracket">Open bracket</button>
           <button class="secondary" data-action="groups">Browse groups</button>
-          <button class="secondary" data-action="venues">Venue guide</button>
+          <button class="secondary" data-action="standings">Qualification tracker</button>
         </div>
       </div>
       <article class="spotlight">
@@ -153,9 +219,9 @@ function overview() {
     </section>
 
     <section class="stat-grid">
-      <button class="stat card clickable" data-action="schedule"><strong>${matches.length}</strong><span>Fixtures</span></button>
-      <button class="stat card clickable" data-action="groups"><strong>${Object.keys(standings).length}</strong><span>Groups</span></button>
-      <button class="stat card clickable" data-action="teams"><strong>${state.favorites.length}</strong><span>Favorite teams</span></button>
+      <button class="stat card clickable" data-action="schedule"><strong>${matches.length}</strong><span>Group fixtures</span></button>
+      <button class="stat card clickable" data-action="groups"><strong>${Object.keys(tables).length}</strong><span>Groups</span></button>
+      <button class="stat card clickable" data-action="bracket"><strong>32</strong><span>Round of 32 slots</span></button>
       <button class="stat card clickable" data-action="venues"><strong>${venues.length}</strong><span>Venues</span></button>
     </section>
 
@@ -172,7 +238,7 @@ function overview() {
       <article class="card"><div class="section-row"><h3>Today</h3><button class="secondary small" data-action="schedule">Schedule</button></div><div class="match-list">${today.map(matchCard).join('') || '<p class="muted">No matches today.</p>'}</div></article>
       <article class="card"><div class="section-row"><h3>Tomorrow</h3><button class="secondary small" data-action="schedule">Schedule</button></div><div class="match-list">${tomorrow.slice(0, 5).map(matchCard).join('') || '<p class="muted">No matches tomorrow.</p>'}</div></article>
       <article class="card"><div class="section-row"><h3>Recently finished</h3><button class="secondary small" data-action="schedule">All fixtures</button></div><div class="match-list">${finished.slice(0, 4).map(matchCard).join('') || '<p class="muted">No completed matches yet.</p>'}</div></article>
-      <article class="card wide"><div class="section-row"><h3>Group A snapshot</h3><button class="secondary small" data-group="A">Open Group A</button></div>${standingsTable('A', standings.A || [])}</article>
+      <article class="card wide"><div class="section-row"><h3>Best third-place table</h3><button class="secondary small" data-action="bracket">Full tracker</button></div>${thirdPlaceTableMini(tables)}</article>
       <article class="card"><h3>Data status</h3><p class="result-line">Static data loaded successfully</p><p class="muted">Last data update: ${meta.lastUpdated ? new Date(meta.lastUpdated).toLocaleString() : 'unknown'}</p></article>
     </section>
   `;
@@ -185,7 +251,12 @@ function favoriteMatches() {
     return (rank[a.status] ?? 9) - (rank[b.status] ?? 9) || new Date(a.kickoff) - new Date(b.kickoff);
   });
 }
-function favoriteTeamChip(name) { const team = getTeam(name); const { row, rank } = teamStanding(name); return `<button class="team-chip" data-team="${name}"><strong>${team.flag} ${name}</strong><span>Group ${team.group} • ${rank || '-'}${rank ? ordinal(rank) : ''} • ${row?.points ?? 0} pts</span></button>`; }
+function favoriteTeamChip(name) {
+  const team = getTeam(name);
+  const { row, rank } = teamStanding(name);
+  const status = qualificationStatus(name);
+  return `<button class="team-chip" data-team="${name}"><strong>${team.flag} ${name}</strong><span>Group ${team.group} • ${rank || '-'}${rank ? ordinal(rank) : ''} • ${row?.points ?? 0} pts</span><span>${status.icon} ${status.label}</span></button>`;
+}
 function ordinal(n) { return n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'; }
 function matchCard(match) {
   const home = getTeam(match.home); const away = getTeam(match.away);
@@ -203,25 +274,35 @@ function schedule() {
   return `<section class="section-head"><div><h2>Schedule</h2><p>Clickable fixture cards with countdown labels, finished/live/scheduled states, and favorite-team filtering.</p></div></section><section class="filters card"><input id="search" placeholder="Search team, venue, city..." value="${state.query}"><select id="groupFilter"><option value="all" ${state.group === 'all' ? 'selected' : ''}>All groups</option><option value="favorites" ${state.group === 'favorites' ? 'selected' : ''}>My favorites</option>${groups.filter(g => g !== 'all').map(g => `<option value="${g}" ${state.group === g ? 'selected' : ''}>Group ${g}</option>`).join('')}</select></section><section class="match-grid">${matches.map(matchCard).join('') || '<article class="card"><p class="muted">No matches match this filter.</p></article>'}</section>`;
 }
 
-function standings() { const tables = buildStandings(state.data.matches, state.data.teams); return `<section class="section-head"><div><h2>Standings</h2><p>Tables are computed automatically from finished match results. Top two highlighted; third-place slots marked as watchlist.</p></div></section><section class="standings-grid">${Object.keys(tables).sort().map(group => `<article class="card"><div class="section-row"><h3>Group ${group}</h3><button class="secondary small" data-group="${group}">Open group</button></div>${standingsTable(group, tables[group])}</article>`).join('')}</section>`; }
-function standingsTable(group, rows) { return `<table class="standings-table"><thead><tr><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>${rows.map((r, i) => `<tr class="${i < 2 ? 'qualify' : i === 2 ? 'third-watch' : ''}"><td><button class="table-team" data-team="${r.team}">${getTeam(r.team).flag} ${r.team}</button></td><td>${r.played}</td><td>${r.won}</td><td>${r.drawn}</td><td>${r.lost}</td><td>${r.gd > 0 ? '+' : ''}${r.gd}</td><td><strong>${r.points}</strong></td></tr>`).join('')}</tbody></table>`; }
+function standings() {
+  const tables = buildStandings(state.data.matches, state.data.teams);
+  return `<section class="section-head"><div><h2>Standings</h2><p>Tables are computed from finished results. Top two are automatic projected qualifiers; third place feeds the best-third table.</p></div><button class="primary small" data-action="bracket">Bracket tracker</button></section><section class="standings-grid">${Object.keys(tables).sort().map(group => `<article class="card"><div class="section-row"><h3>Group ${group}</h3><button class="secondary small" data-group="${group}">Open group</button></div>${standingsTable(group, tables[group])}</article>`).join('')}</section>`;
+}
+function standingsTable(group, rows) {
+  return `<table class="standings-table"><thead><tr><th>Team</th><th>Status</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>${rows.map((r, i) => { const status = qualificationStatus(r.team); return `<tr class="${i < 2 ? 'qualify' : i === 2 ? 'third-watch' : ''}"><td><button class="table-team" data-team="${r.team}">${getTeam(r.team).flag} ${r.team}</button></td><td><span class="status-dot ${status.key}">${status.icon} ${status.label}</span></td><td>${r.played}</td><td>${r.won}</td><td>${r.drawn}</td><td>${r.lost}</td><td>${r.gd > 0 ? '+' : ''}${r.gd}</td><td><strong>${r.points}</strong></td></tr>`; }).join('')}</tbody></table>`;
+}
+
+function thirdPlaceTableMini(tables) {
+  const rows = thirdPlaceTable(tables);
+  return `<table class="standings-table compact-table"><thead><tr><th>#</th><th>Team</th><th>Group</th><th>GD</th><th>Pts</th></tr></thead><tbody>${rows.map((r, i) => `<tr class="${i < 8 ? 'qualify' : 'third-watch'}"><td>${i + 1}</td><td><button class="table-team" data-team="${r.team}">${getTeam(r.team).flag} ${r.team}</button></td><td>${r.group}</td><td>${r.gd > 0 ? '+' : ''}${r.gd}</td><td><strong>${r.points}</strong></td></tr>`).join('')}</tbody></table>`;
+}
 
 function groups() {
   const tables = buildStandings(state.data.matches, state.data.teams);
-  return `<section class="section-head"><div><h2>Groups</h2><p>Open any group for its table, teams, and loaded fixtures.</p></div></section><section class="group-grid">${Object.keys(tables).sort().map(group => {
+  return `<section class="section-head"><div><h2>Groups</h2><p>Open any group for its table, teams, fixtures, and qualification snapshot.</p></div></section><section class="group-grid">${Object.keys(tables).sort().map(group => {
     const matches = groupMatches(group); const completed = matches.filter(m => m.status === 'finished').length;
     return `<article class="group-card card clickable" data-group="${group}"><div class="group-badge">${group}</div><h3>Group ${group}</h3><p class="muted">${groupTeams(group).map(t => `${t.flag} ${t.name}`).join(' • ')}</p><div class="mini-meta"><span>${completed}/${matches.length} played</span><span>${matches.length} fixtures</span></div>${standingsTable(group, tables[group])}</article>`;
   }).join('')}</section>`;
 }
 function groupDetail(group) {
   const tables = buildStandings(state.data.matches, state.data.teams); const rows = tables[group] || []; const matches = groupMatches(group); const teams = groupTeams(group);
-  return `<section class="detail-stack"><button class="secondary small" data-action="groups">← Back to groups</button><section class="card detail group-detail"><div class="eyebrow">Group page</div><h2>Group ${group}</h2><p>${teams.map(t => `${t.flag} ${t.name}`).join(' • ')}</p><div class="profile-stats"><div><strong>${teams.length}</strong><span>Teams</span></div><div><strong>${matches.length}</strong><span>Fixtures</span></div><div><strong>${matches.filter(m => m.status === 'finished').length}</strong><span>Played</span></div><div><strong>${matches.filter(m => m.status !== 'finished').length}</strong><span>Remaining</span></div></div></section><section class="team-detail-grid"><article class="card"><h3>Standings</h3>${standingsTable(group, rows)}</article><article class="card"><h3>Teams</h3><div class="team-chip-row">${teams.map(t => `<button class="team-chip" data-team="${t.name}"><strong>${t.flag} ${t.name}</strong><span>${t.code}</span></button>`).join('')}</div></article><article class="card wide"><h3>Group ${group} fixtures</h3><div class="match-list">${matches.map(matchCard).join('')}</div></article></section></section>`;
+  return `<section class="detail-stack"><button class="secondary small" data-action="groups">← Back to groups</button><section class="card detail group-detail"><div class="eyebrow">Group page</div><h2>Group ${group}</h2><p>${teams.map(t => `${t.flag} ${t.name}`).join(' • ')}</p><div class="profile-stats"><div><strong>${teams.length}</strong><span>Teams</span></div><div><strong>${matches.length}</strong><span>Fixtures</span></div><div><strong>${matches.filter(m => m.status === 'finished').length}</strong><span>Played</span></div><div><strong>${matches.filter(m => m.status !== 'finished').length}</strong><span>Remaining</span></div></div></section><section class="team-detail-grid"><article class="card"><h3>Standings</h3>${standingsTable(group, rows)}</article><article class="card"><h3>Qualification read</h3><div class="team-chip-row">${rows.map(r => { const s = qualificationStatus(r.team); return `<button class="team-chip" data-team="${r.team}"><strong>${getTeam(r.team).flag} ${r.team}</strong><span>${s.icon} ${s.label}</span></button>`; }).join('')}</div></article><article class="card wide"><h3>Group ${group} fixtures</h3><div class="match-list">${matches.map(matchCard).join('')}</div></article></section></section>`;
 }
 
 function teams() {
   const tables = buildStandings(state.data.matches, state.data.teams); const q = state.query.toLowerCase();
   const teams = state.data.teams.filter(team => !q || [team.name, team.group, team.code].join(' ').toLowerCase().includes(q)).sort((a,b) => Number(isFavorite(b.name)) - Number(isFavorite(a.name)) || a.group.localeCompare(b.group) || a.name.localeCompare(b.name));
-  return `<section class="section-head"><div><h2>Teams</h2><p>Star teams for your personal dashboard, then click a card for fixtures and group position.</p></div></section><section class="filters card"><input id="search" placeholder="Search teams or groups..." value="${state.query}"></section><section class="team-grid">${teams.map(team => { const row = tables[team.group]?.find(r => r.team === team.name); const rank = (tables[team.group] || []).findIndex(r => r.team === team.name) + 1; return `<article class="team-card card ${isFavorite(team.name) ? 'is-favorite' : ''}"><button class="favorite-btn" data-favorite="${team.name}" title="Toggle favorite">${isFavorite(team.name) ? '★' : '☆'}</button><button class="team-main" data-team="${team.name}"><strong>${team.flag} ${team.name}</strong><span>Group ${team.group} • ${rank || '-'}${rank ? ordinal(rank) : ''}</span><span>${row?.points ?? 0} pts • ${row?.played ?? 0} played • GD ${row?.gd > 0 ? '+' : ''}${row?.gd ?? 0}</span></button></article>`; }).join('')}</section>`;
+  return `<section class="section-head"><div><h2>Teams</h2><p>Star teams for your personal dashboard, then click a card for fixtures, group position, and scenario notes.</p></div></section><section class="filters card"><input id="search" placeholder="Search teams or groups..." value="${state.query}"></section><section class="team-grid">${teams.map(team => { const row = tables[team.group]?.find(r => r.team === team.name); const rank = (tables[team.group] || []).findIndex(r => r.team === team.name) + 1; const status = qualificationStatus(team.name); return `<article class="team-card card ${isFavorite(team.name) ? 'is-favorite' : ''}"><button class="favorite-btn" data-favorite="${team.name}" title="Toggle favorite">${isFavorite(team.name) ? '★' : '☆'}</button><button class="team-main" data-team="${team.name}"><strong>${team.flag} ${team.name}</strong><span>Group ${team.group} • ${rank || '-'}${rank ? ordinal(rank) : ''}</span><span>${row?.points ?? 0} pts • ${row?.played ?? 0} played • GD ${row?.gd > 0 ? '+' : ''}${row?.gd ?? 0}</span><span>${status.icon} ${status.label}</span></button></article>`; }).join('')}</section>`;
 }
 
 function venues() {
@@ -234,8 +315,31 @@ function venueDetail(name) {
   return `<section class="detail-stack"><button class="secondary small" data-action="venues">← Back to venues</button><section class="card detail"><div class="eyebrow">Venue page</div><h2>${venue.name}</h2><p>${venue.city}${venue.country ? ` • ${venue.country}` : ''}</p><div class="profile-stats"><div><strong>${matches.length}</strong><span>Matches</span></div><div><strong>${new Set(matches.map(m => m.group)).size}</strong><span>Groups</span></div><div><strong>${matches.filter(m => m.status === 'finished').length}</strong><span>Finished</span></div><div><strong>${matches.filter(m => m.status !== 'finished').length}</strong><span>Upcoming</span></div></div></section><section class="card"><h3>Matches at ${venue.name}</h3><div class="match-list">${matches.map(matchCard).join('') || '<p class="muted">No loaded matches for this venue.</p>'}</div></section></section>`;
 }
 
-function matchDetail(id) { const match = state.data.matches.find(m => m.id === id); if (!match) return '<section class="card"><h2>Match not found</h2></section>'; return `<section class="card detail"><button class="secondary small" data-action="schedule">← Back to schedule</button><div class="eyebrow">Group ${match.group} • ${match.stage}</div><h2>${scoreline(match)}</h2><p>${formatDate(match.kickoff)}</p><p><button class="table-team" data-venue="${match.venue}">${match.venue}, ${match.city}</button></p><p>${match.broadcast || 'Broadcast TBD'}</p><p>${resultBadge(match)}</p><div class="detail-actions"><button class="secondary small" data-group="${match.group}">Open Group ${match.group}</button><button class="secondary small" data-team="${match.home}">Open ${match.home}</button><button class="secondary small" data-team="${match.away}">Open ${match.away}</button></div></section>`; }
-function teamDetail(name) { const team = getTeam(name); const matches = teamMatches(name); const { row, rank, rows } = teamStanding(name); const next = matches.find(m => m.status !== 'finished'); const last = [...matches].reverse().find(m => m.status === 'finished'); return `<section class="team-detail-grid"><article class="card detail team-profile"><button class="secondary small" data-action="teams">← Back to teams</button><div class="eyebrow">Group ${team.group}</div><div class="team-title-row"><h2>${team.flag} ${team.name}</h2><button class="favorite-btn large" data-favorite="${team.name}">${isFavorite(team.name) ? '★ Favorite' : '☆ Add favorite'}</button></div><div class="profile-stats"><div><strong>${rank || '-'}</strong><span>Group rank</span></div><div><strong>${row?.points ?? 0}</strong><span>Points</span></div><div><strong>${row?.gd > 0 ? '+' : ''}${row?.gd ?? 0}</strong><span>Goal diff</span></div><div><strong>${row?.played ?? 0}</strong><span>Played</span></div></div><div class="split-cards"><div><h3>Next match</h3>${next ? matchCard(next) : '<p class="muted">No upcoming loaded fixture.</p>'}</div><div><h3>Latest result</h3>${last ? matchCard(last) : '<p class="muted">No completed loaded result.</p>'}</div></div></article><article class="card"><div class="section-row"><h3>Group ${team.group} table</h3><button class="secondary small" data-group="${team.group}">Open group</button></div>${standingsTable(team.group, rows)}</article><article class="card wide"><h3>${team.name} fixtures</h3><div class="match-list">${matches.map(matchCard).join('') || '<p class="muted">No fixtures loaded for this team yet.</p>'}</div></article></section>`; }
+function bracket() {
+  const tables = buildStandings(state.data.matches, state.data.teams);
+  const slots = bracketSlots();
+  const thirds = thirdPlaceTable(tables);
+  const played = state.data.matches.filter(m => m.status === 'finished').length;
+  return `<section class="section-head"><div><h2>Bracket</h2><p>Round of 32 placeholders, qualification tracker, and best third-place ranking. This is projected from current group tables until group stage finishes.</p></div></section>
+    <section class="progress-banner card"><div><strong>${played}/${TOTAL_TOURNAMENT_MATCHES}</strong><span>matches played</span></div><div><strong>${percent(played, GROUP_STAGE_MATCHES)}%</strong><span>group stage</span></div><div><strong>${thirds.filter(t => t.projectedAdvance).length}/8</strong><span>best-third projected</span></div></section>
+    <section class="bracket-layout">
+      <article class="card wide"><div class="section-row"><h3>Projected Round of 32</h3><span class="badge upcoming">placeholder path</span></div><div class="bracket-grid">${slots.map((pair, i) => bracketMatch(pair, i + 1)).join('')}</div></article>
+      <article class="card"><h3>Best third-place table</h3>${thirdPlaceTableMini(tables)}</article>
+      <article class="card"><h3>Qualification legend</h3><div class="legend-stack"><span class="status-dot projected">🟢 Projected qualified</span><span class="status-dot third">🟡 Best-third watch</span><span class="status-dot contention">🟡 In contention</span><span class="status-dot eliminated">🔴 Eliminated</span></div><p class="muted">Final qualification needs all group matches. Current statuses are projected from loaded results.</p></article>
+    </section>`;
+}
+function bracketMatch(pair, index) { return `<div class="bracket-match"><div class="eyebrow">R32 Match ${index}</div><button data-team="${pair[0]}">${teamLabel(pair[0])}</button><button data-team="${pair[1]}">${teamLabel(pair[1])}</button></div>`; }
+function teamLabel(name) { const team = getTeam(name); return team.group === '?' ? name : `${team.flag} ${name}`; }
+
+function matchDetail(id) {
+  const match = state.data.matches.find(m => m.id === id);
+  if (!match) return '<section class="card"><h2>Match not found</h2></section>';
+  return `<section class="card detail"><button class="secondary small" data-action="schedule">← Back to schedule</button><div class="eyebrow">Group ${match.group} • ${match.stage}</div><h2>${scoreline(match)}</h2><p>${formatDate(match.kickoff)}</p><p><button class="table-team" data-venue="${match.venue}">${match.venue}, ${match.city}</button></p><p>${match.broadcast || 'Broadcast TBD'}</p><p>${resultBadge(match)}</p><div class="detail-actions"><button class="secondary small" data-group="${match.group}">Open Group ${match.group}</button><button class="secondary small" data-team="${match.home}">Open ${match.home}</button><button class="secondary small" data-team="${match.away}">Open ${match.away}</button></div></section>`;
+}
+function teamDetail(name) {
+  const team = getTeam(name); const matches = teamMatches(name); const { row, rank, rows } = teamStanding(name); const next = matches.find(m => m.status !== 'finished'); const last = [...matches].reverse().find(m => m.status === 'finished'); const status = qualificationStatus(name);
+  return `<section class="team-detail-grid"><article class="card detail team-profile"><button class="secondary small" data-action="teams">← Back to teams</button><div class="eyebrow">Group ${team.group}</div><div class="team-title-row"><h2>${team.flag} ${team.name}</h2><button class="favorite-btn large" data-favorite="${team.name}">${isFavorite(team.name) ? '★ Favorite' : '☆ Add favorite'}</button></div><div class="profile-stats"><div><strong>${rank || '-'}</strong><span>Group rank</span></div><div><strong>${row?.points ?? 0}</strong><span>Points</span></div><div><strong>${row?.gd > 0 ? '+' : ''}${row?.gd ?? 0}</strong><span>Goal diff</span></div><div><strong>${row?.played ?? 0}</strong><span>Played</span></div></div><div class="scenario-card"><h3>${status.icon} ${status.label}</h3><ul>${scenarioNotes(name).map(note => `<li>${note}</li>`).join('')}</ul></div><div class="split-cards"><div><h3>Next match</h3>${next ? matchCard(next) : '<p class="muted">No upcoming loaded fixture.</p>'}</div><div><h3>Latest result</h3>${last ? matchCard(last) : '<p class="muted">No completed loaded result.</p>'}</div></div></article><article class="card"><div class="section-row"><h3>Group ${team.group} table</h3><button class="secondary small" data-group="${team.group}">Open group</button></div>${standingsTable(team.group, rows)}</article><article class="card wide"><h3>${team.name} fixtures</h3><div class="match-list">${matches.map(matchCard).join('') || '<p class="muted">No fixtures loaded for this team yet.</p>'}</div></article></section>`;
+}
 
 function bind() {
   document.querySelectorAll('[data-action]').forEach(btn => btn.addEventListener('click', () => route(btn.dataset.action, { query: '', group: 'all' })));
@@ -257,6 +361,7 @@ function render() {
   else if (state.tab === 'teams') content = teams();
   else if (state.tab === 'venues') content = venues();
   else if (state.tab === 'venue') content = venueDetail(state.venue);
+  else if (state.tab === 'bracket') content = bracket();
   else if (state.tab === 'match') content = matchDetail(state.matchId);
   else if (state.tab === 'team') content = teamDetail(state.team);
   else content = overview();

@@ -169,3 +169,87 @@ nav { display: flex; flex-wrap: wrap; gap: 0.65rem; justify-content: flex-end; }
 .standings-table tr.third-watch { background: rgba(255,207,90,.045); }
 .venue-card h3, .group-card h3 { margin-bottom: .6rem; }
 @media (max-width: 920px) { .group-grid, .venue-grid { grid-template-columns: 1fr; } }
+
+/* 0.6.0 Tournament Intelligence */
+.progress-banner {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.progress-banner div {
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.045);
+  border-radius: 1rem;
+  padding: .9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+}
+.progress-banner strong { color: var(--accent); font-size: 1.75rem; }
+.progress-banner span { color: var(--muted); }
+.status-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  border-radius: 999px;
+  padding: .3rem .55rem;
+  border: 1px solid var(--line);
+  font-size: .78rem;
+  white-space: nowrap;
+}
+.status-dot.projected, .status-dot.qualified { color: var(--good); border-color: rgba(126,231,135,.35); }
+.status-dot.third, .status-dot.contention { color: var(--warn); border-color: rgba(255,207,90,.35); }
+.status-dot.eliminated { color: var(--danger); border-color: rgba(255,123,114,.35); }
+.bracket-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(20rem, .75fr);
+  gap: 1rem;
+  align-items: start;
+}
+.bracket-layout .wide { grid-row: span 2; }
+.bracket-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .8rem;
+  margin-top: 1rem;
+}
+.bracket-match {
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.045);
+  border-radius: 1rem;
+  padding: .8rem;
+  display: grid;
+  gap: .5rem;
+}
+.bracket-match button {
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(0,0,0,.14);
+  color: var(--text);
+  border-radius: .75rem;
+  padding: .65rem .7rem;
+}
+.bracket-match button:hover { border-color: var(--accent); }
+.legend-stack, .scenario-card ul {
+  display: grid;
+  gap: .65rem;
+  margin-top: 1rem;
+}
+.scenario-card {
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.045);
+  border-radius: 1rem;
+  padding: 1rem;
+}
+.scenario-card ul { padding-left: 1.2rem; color: var(--muted); }
+.compact-table { font-size: .85rem; }
+@media (max-width: 1100px) {
+  .bracket-layout, .bracket-grid, .progress-banner { grid-template-columns: 1fr; }
+  .bracket-layout .wide { grid-row: auto; }
+}
+@media (max-width: 560px) {
+  .status-dot { white-space: normal; }
+}
