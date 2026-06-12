@@ -163,6 +163,81 @@ function scenarioNotes(teamName) {
   ];
 }
 
+function teamForm(teamName) {
+  return teamMatches(teamName)
+    .filter(m => m.status === 'finished')
+    .slice(-5)
+    .map(m => {
+      const forScore = m.home === teamName ? Number(m.homeScore) : Number(m.awayScore);
+      const againstScore = m.home === teamName ? Number(m.awayScore) : Number(m.homeScore);
+      return forScore > againstScore ? 'W' : forScore < againstScore ? 'L' : 'D';
+    });
+}
+
+function formChips(teamName) {
+  const form = teamForm(teamName);
+  if (!form.length) return '<div class="form-row empty"><span>No completed matches yet</span></div>';
+  return `<div class="form-row">${form.map(letter => `<span class="form-chip ${letter.toLowerCase()}">${letter}</span>`).join('')}</div>`;
+}
+
+function qualificationOutlook(teamName) {
+  const { row, rank } = teamStanding(teamName);
+  const status = qualificationStatus(teamName);
+  const points = row?.points ?? 0;
+  const played = row?.played ?? 0;
+  let value = 45;
+  if (rank === 1) value = 86;
+  else if (rank === 2) value = 72;
+  else if (rank === 3) value = 52;
+  else if (rank === 4) value = 28;
+  value += Math.min(12, points * 4);
+  value -= Math.max(0, played - 1) * 4;
+  if (status.key === 'qualified') value = 100;
+  if (status.key === 'eliminated') value = 0;
+  if (status.key === 'third') value = Math.max(value, 55);
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function outlookMeter(teamName) {
+  const value = qualificationOutlook(teamName);
+  return `<div class="meter-card"><div class="section-row mini"><strong>Qualification outlook</strong><span>${value}%</span></div><div class="meter"><i style="width:${value}%"></i></div><p class="muted">Rule-based projection from current rank, points, played matches, and best-third position.</p></div>`;
+}
+
+function tournamentStories(tables) {
+  const finished = state.data.matches.filter(m => m.status === 'finished');
+  const biggest = finished.slice().sort((a,b) => Math.abs(Number(b.homeScore)-Number(b.awayScore)) - Math.abs(Number(a.homeScore)-Number(a.awayScore)))[0];
+  const thirds = thirdPlaceTable(tables);
+  const closest = Object.entries(tables).map(([group, rows]) => {
+    const spread = (rows[0]?.points ?? 0) - (rows[3]?.points ?? 0);
+    return { group, spread, leader: rows[0]?.team || 'TBD' };
+  }).sort((a,b) => a.spread - b.spread || a.group.localeCompare(b.group))[0];
+  const venueCounts = state.data.venues.map(v => ({ ...v, count: venueMatches(v.name).length })).sort((a,b)=>b.count-a.count)[0];
+  const bestThirdRace = thirds.slice(7, 10).map(t => `${getTeam(t.team).flag} ${t.team}`).join(' / ') || 'Waiting for third-place results';
+  return [
+    { label: 'Biggest winner', value: biggest ? scoreline(biggest).replace('FT — ', '') : 'No final result yet', note: biggest ? `${Math.abs(Number(biggest.homeScore)-Number(biggest.awayScore))} goal margin` : 'Completed results will appear here.' },
+    { label: 'Closest group', value: closest ? `Group ${closest.group}` : 'TBD', note: closest ? `${closest.spread} point spread across the table` : 'Waiting for standings.' },
+    { label: 'Best-third race', value: bestThirdRace, note: 'Teams around the 8th best-third cutoff.' },
+    { label: 'Most active venue', value: venueCounts ? venueCounts.name : 'TBD', note: venueCounts ? `${venueCounts.count} loaded matches • ${venueCounts.city}` : 'Venue data missing.' }
+  ];
+}
+
+function storyCards(tables) {
+  return `<section class="story-grid">${tournamentStories(tables).map(story => `<article class="story-card card"><div class="eyebrow">${story.label}</div><h3>${story.value}</h3><p class="muted">${story.note}</p></article>`).join('')}</section>`;
+}
+
+function groupScenarioCards(group) {
+  const rows = buildStandings(state.data.matches, state.data.teams)[group] || [];
+  const remaining = groupMatches(group).filter(m => m.status !== 'finished');
+  const next = remaining[0];
+  const leader = rows[0]?.team;
+  const bubble = rows[2]?.team;
+  return `<div class="scenario-grid">
+    <article class="scenario-card"><h3>Leader path</h3><p>${leader ? `${getTeam(leader).flag} ${leader}` : 'TBD'} controls the group for now. A win in the next loaded fixture strengthens an automatic Round of 32 path.</p></article>
+    <article class="scenario-card"><h3>Bubble watch</h3><p>${bubble ? `${getTeam(bubble).flag} ${bubble}` : 'TBD'} is the current third-place checkpoint. Their outlook depends on the best third-place table.</p></article>
+    <article class="scenario-card"><h3>Next swing match</h3><p>${next ? `${getTeam(next.home).flag} ${next.home} vs ${getTeam(next.away).flag} ${next.away} can reshape Group ${group}.` : 'No remaining group fixtures in loaded data.'}</p></article>
+  </div>`;
+}
+
 function route(tab, extra = {}) { state.tab = tab; Object.assign(state, extra); history.pushState(null, '', `#${tab}`); render(); }
 window.addEventListener('popstate', () => { state.tab = location.hash.replace('#', '') || 'overview'; render(); });
 
@@ -203,7 +278,7 @@ function overview() {
       <div>
         <div class="eyebrow">Tournament Intelligence</div>
         <h2>Follow the tournament by day, group, team, venue, and qualification path.</h2>
-        <p>Now includes projected qualifiers, best third-place ranking, Round of 32 placeholders, and team scenario notes.</p>
+        <p>Now adds live-feeling match windows, tournament story cards, team form, qualification outlook meters, and bracket polish.</p>
         <div class="hero-actions">
           <button class="primary" data-action="bracket">Open bracket</button>
           <button class="secondary" data-action="groups">Browse groups</button>
@@ -224,6 +299,9 @@ function overview() {
       <button class="stat card clickable" data-action="bracket"><strong>32</strong><span>Round of 32 slots</span></button>
       <button class="stat card clickable" data-action="venues"><strong>${venues.length}</strong><span>Venues</span></button>
     </section>
+
+    <section class="section-row story-heading"><div><h3>Tournament stories</h3><p class="muted">Auto-generated story cards from results, standings, venues, and best-third projections.</p></div></section>
+    ${storyCards(tables)}
 
     ${state.favorites.length ? `
     <section class="card favorite-strip pinned">
@@ -296,7 +374,7 @@ function groups() {
 }
 function groupDetail(group) {
   const tables = buildStandings(state.data.matches, state.data.teams); const rows = tables[group] || []; const matches = groupMatches(group); const teams = groupTeams(group);
-  return `<section class="detail-stack"><button class="secondary small" data-action="groups">← Back to groups</button><section class="card detail group-detail"><div class="eyebrow">Group page</div><h2>Group ${group}</h2><p>${teams.map(t => `${t.flag} ${t.name}`).join(' • ')}</p><div class="profile-stats"><div><strong>${teams.length}</strong><span>Teams</span></div><div><strong>${matches.length}</strong><span>Fixtures</span></div><div><strong>${matches.filter(m => m.status === 'finished').length}</strong><span>Played</span></div><div><strong>${matches.filter(m => m.status !== 'finished').length}</strong><span>Remaining</span></div></div></section><section class="team-detail-grid"><article class="card"><h3>Standings</h3>${standingsTable(group, rows)}</article><article class="card"><h3>Qualification read</h3><div class="team-chip-row">${rows.map(r => { const s = qualificationStatus(r.team); return `<button class="team-chip" data-team="${r.team}"><strong>${getTeam(r.team).flag} ${r.team}</strong><span>${s.icon} ${s.label}</span></button>`; }).join('')}</div></article><article class="card wide"><h3>Group ${group} fixtures</h3><div class="match-list">${matches.map(matchCard).join('')}</div></article></section></section>`;
+  return `<section class="detail-stack"><button class="secondary small" data-action="groups">← Back to groups</button><section class="card detail group-detail"><div class="eyebrow">Group page</div><h2>Group ${group}</h2><p>${teams.map(t => `${t.flag} ${t.name}`).join(' • ')}</p><div class="profile-stats"><div><strong>${teams.length}</strong><span>Teams</span></div><div><strong>${matches.length}</strong><span>Fixtures</span></div><div><strong>${matches.filter(m => m.status === 'finished').length}</strong><span>Played</span></div><div><strong>${matches.filter(m => m.status !== 'finished').length}</strong><span>Remaining</span></div></div></section><section class="card"><div class="section-row"><h3>Group ${group} scenarios</h3><span class="badge upcoming">rule-based</span></div>${groupScenarioCards(group)}</section><section class="team-detail-grid"><article class="card"><h3>Standings</h3>${standingsTable(group, rows)}</article><article class="card"><h3>Qualification read</h3><div class="team-chip-row">${rows.map(r => { const s = qualificationStatus(r.team); return `<button class="team-chip" data-team="${r.team}"><strong>${getTeam(r.team).flag} ${r.team}</strong><span>${s.icon} ${s.label}</span><span>${qualificationOutlook(r.team)}% outlook</span></button>`; }).join('')}</div></article><article class="card wide"><h3>Group ${group} fixtures</h3><div class="match-list">${matches.map(matchCard).join('')}</div></article></section></section>`;
 }
 
 function teams() {
@@ -323,7 +401,7 @@ function bracket() {
   return `<section class="section-head"><div><h2>Bracket</h2><p>Round of 32 placeholders, qualification tracker, and best third-place ranking. This is projected from current group tables until group stage finishes.</p></div></section>
     <section class="progress-banner card"><div><strong>${played}/${TOTAL_TOURNAMENT_MATCHES}</strong><span>matches played</span></div><div><strong>${percent(played, GROUP_STAGE_MATCHES)}%</strong><span>group stage</span></div><div><strong>${thirds.filter(t => t.projectedAdvance).length}/8</strong><span>best-third projected</span></div></section>
     <section class="bracket-layout">
-      <article class="card wide"><div class="section-row"><h3>Projected Round of 32</h3><span class="badge upcoming">placeholder path</span></div><div class="bracket-grid">${slots.map((pair, i) => bracketMatch(pair, i + 1)).join('')}</div></article>
+      <article class="card wide"><div class="section-row"><h3>Projected Round of 32</h3><span class="badge upcoming">placeholder path</span></div><div class="bracket-grid">${slots.map((pair, i) => bracketMatch(pair, i + 1)).join('')}</div><div class="round-ladder"><span>Round of 32</span><i></i><span>Round of 16</span><i></i><span>Quarterfinals</span><i></i><span>Semifinals</span><i></i><span>Final</span></div></article>
       <article class="card"><h3>Best third-place table</h3>${thirdPlaceTableMini(tables)}</article>
       <article class="card"><h3>Qualification legend</h3><div class="legend-stack"><span class="status-dot projected">🟢 Projected qualified</span><span class="status-dot third">🟡 Best-third watch</span><span class="status-dot contention">🟡 In contention</span><span class="status-dot eliminated">🔴 Eliminated</span></div><p class="muted">Final qualification needs all group matches. Current statuses are projected from loaded results.</p></article>
     </section>`;
@@ -338,7 +416,7 @@ function matchDetail(id) {
 }
 function teamDetail(name) {
   const team = getTeam(name); const matches = teamMatches(name); const { row, rank, rows } = teamStanding(name); const next = matches.find(m => m.status !== 'finished'); const last = [...matches].reverse().find(m => m.status === 'finished'); const status = qualificationStatus(name);
-  return `<section class="team-detail-grid"><article class="card detail team-profile"><button class="secondary small" data-action="teams">← Back to teams</button><div class="eyebrow">Group ${team.group}</div><div class="team-title-row"><h2>${team.flag} ${team.name}</h2><button class="favorite-btn large" data-favorite="${team.name}">${isFavorite(team.name) ? '★ Favorite' : '☆ Add favorite'}</button></div><div class="profile-stats"><div><strong>${rank || '-'}</strong><span>Group rank</span></div><div><strong>${row?.points ?? 0}</strong><span>Points</span></div><div><strong>${row?.gd > 0 ? '+' : ''}${row?.gd ?? 0}</strong><span>Goal diff</span></div><div><strong>${row?.played ?? 0}</strong><span>Played</span></div></div><div class="scenario-card"><h3>${status.icon} ${status.label}</h3><ul>${scenarioNotes(name).map(note => `<li>${note}</li>`).join('')}</ul></div><div class="split-cards"><div><h3>Next match</h3>${next ? matchCard(next) : '<p class="muted">No upcoming loaded fixture.</p>'}</div><div><h3>Latest result</h3>${last ? matchCard(last) : '<p class="muted">No completed loaded result.</p>'}</div></div></article><article class="card"><div class="section-row"><h3>Group ${team.group} table</h3><button class="secondary small" data-group="${team.group}">Open group</button></div>${standingsTable(team.group, rows)}</article><article class="card wide"><h3>${team.name} fixtures</h3><div class="match-list">${matches.map(matchCard).join('') || '<p class="muted">No fixtures loaded for this team yet.</p>'}</div></article></section>`;
+  return `<section class="team-detail-grid"><article class="card detail team-profile"><button class="secondary small" data-action="teams">← Back to teams</button><div class="eyebrow">Group ${team.group}</div><div class="team-title-row"><h2>${team.flag} ${team.name}</h2><button class="favorite-btn large" data-favorite="${team.name}">${isFavorite(team.name) ? '★ Favorite' : '☆ Add favorite'}</button></div><div class="profile-stats"><div><strong>${rank || '-'}</strong><span>Group rank</span></div><div><strong>${row?.points ?? 0}</strong><span>Points</span></div><div><strong>${row?.gd > 0 ? '+' : ''}${row?.gd ?? 0}</strong><span>Goal diff</span></div><div><strong>${row?.played ?? 0}</strong><span>Played</span></div></div><div class="intelligence-grid"><div class="scenario-card"><h3>${status.icon} ${status.label}</h3><ul>${scenarioNotes(name).map(note => `<li>${note}</li>`).join('')}</ul></div><div>${outlookMeter(name)}<div class="meter-card"><div class="section-row mini"><strong>Recent form</strong><span>last 5</span></div>${formChips(name)}</div></div></div><div class="split-cards"><div><h3>Next match</h3>${next ? matchCard(next) : '<p class="muted">No upcoming loaded fixture.</p>'}</div><div><h3>Latest result</h3>${last ? matchCard(last) : '<p class="muted">No completed loaded result.</p>'}</div></div></article><article class="card"><div class="section-row"><h3>Group ${team.group} table</h3><button class="secondary small" data-group="${team.group}">Open group</button></div>${standingsTable(team.group, rows)}</article><article class="card wide"><h3>${team.name} fixtures</h3><div class="match-list">${matches.map(matchCard).join('') || '<p class="muted">No fixtures loaded for this team yet.</p>'}</div></article></section>`;
 }
 
 function bind() {
