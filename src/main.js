@@ -254,9 +254,11 @@ function shell(content) {
     <header class="topbar">
       <div><div class="eyebrow">World Cup 2026</div><h1>WC26 Dashboard</h1></div>
       <div class="topbar-actions">
-        <button class="refresh-pill ${state.liveData.source === 'live-api' ? 'live-source' : ''}" data-refresh-live>
-          ${state.liveData.source === 'live-api' ? 'Live API' : 'Static fallback'} · Refresh
-        </button>
+        <div class="data-source-group">
+          <button class="refresh-pill" data-refresh-live>${refreshButtonText()}</button>
+          <span class="source-pill ${dataSourceClass()}">${dataSourceText()}</span>
+          <span class="last-refresh">${lastRefreshText()}</span>
+        </div>
         <nav>${navTabs.map(tab => `<button class="pill ${state.tab === tab ? 'active' : ''}" data-tab="${tab}">${label(tab)}</button>`).join('')}</nav>
       </div>
     </header>
@@ -265,6 +267,24 @@ function shell(content) {
   document.querySelectorAll('[data-tab]').forEach(btn => btn.addEventListener('click', () => route(btn.dataset.tab, { query: '', group: 'all' })));
 }
 function label(tab) { return tab[0].toUpperCase() + tab.slice(1); }
+
+function dataSourceText() {
+  if (state.liveData.status === 'refreshing') return 'Refreshing…';
+  return state.liveData.source === 'live-api' ? 'Source: Live API' : 'Source: Static fallback';
+}
+function dataSourceClass() {
+  if (state.liveData.status === 'refreshing') return 'refreshing';
+  return state.liveData.source === 'live-api' ? 'live-source' : 'fallback-source';
+}
+function refreshButtonText() {
+  if (state.liveData.status === 'refreshing') return 'Refreshing…';
+  if (state.liveData.status === 'updated') return 'Updated ✓';
+  return 'Refresh data';
+}
+function lastRefreshText() {
+  return state.liveData.lastLoaded ? `Last refreshed: ${new Date(state.liveData.lastLoaded).toLocaleString()}` : 'Last refreshed: not yet';
+}
+
 
 function overview() {
   const { matches, teams, venues, meta } = state.data;
@@ -325,7 +345,7 @@ function overview() {
     <section class="card empty-favorites"><h3>No favorite teams yet</h3><p class="muted">Star teams from the Teams page to create a personal match center.</p><button class="primary small" data-action="teams">Pick favorites</button></section>`}
 
     <section class="dashboard-grid">
-      <article class="card"><div class="section-row"><h3>Live now</h3><button class="secondary small" data-action="schedule">All fixtures</button></div><div class="match-list">${live.map(matchCard).join('') || '<p class="muted">No live matches in the static feed.</p>'}</div></article>
+      <article class="card"><div class="section-row"><h3>Live now</h3><button class="secondary small" data-action="schedule">All fixtures</button></div><div class="match-list">${live.map(matchCard).join('') || '<p class="muted">No live matches right now.</p>'}</div></article>
       <article class="card"><div class="section-row"><h3>Today</h3><button class="secondary small" data-action="schedule">Schedule</button></div><div class="match-list">${today.map(matchCard).join('') || '<p class="muted">No matches today.</p>'}</div></article>
       <article class="card"><div class="section-row"><h3>Tomorrow</h3><button class="secondary small" data-action="schedule">Schedule</button></div><div class="match-list">${tomorrow.slice(0, 5).map(matchCard).join('') || '<p class="muted">No matches tomorrow.</p>'}</div></article>
       <article class="card"><div class="section-row"><h3>Recently finished</h3><button class="secondary small" data-action="schedule">All fixtures</button></div><div class="match-list">${finished.slice(0, 4).map(matchCard).join('') || '<p class="muted">No completed matches yet.</p>'}</div></article>
@@ -338,12 +358,12 @@ function overview() {
 
 function dataStatusPanel(meta) {
   const live = state.liveData;
-  const sourceLabel = live.source === 'live-api' ? 'Public live API' : 'Committed static JSON';
+  const sourceLabel = live.source === 'live-api' ? 'World Cup 2026 API' : 'Committed static JSON';
   const loadedAt = live.lastLoaded ? new Date(live.lastLoaded).toLocaleString() : 'not refreshed this session';
   const apiLine = live.source === 'live-api'
-    ? `${live.updates} match records refreshed from worldcup26.ir` 
+    ? `${state.data.matches.length} matches loaded • ${live.updates} changed records from worldcup26.ir`
     : 'Using bundled data until the public API responds.';
-  return `<p class="result-line">${sourceLabel}</p><p class="muted">${apiLine}</p><p class="muted">Last loaded: ${loadedAt}</p>${live.error ? `<p class="api-warning">${live.error}</p>` : ''}<button class="primary small" data-refresh-live>Refresh live data</button>`;
+  return `<p class="result-line">${sourceLabel}</p><p class="muted">${apiLine}</p><p class="muted">Last refreshed: ${loadedAt}</p>${live.error ? `<p class="api-warning">${live.error}</p>` : ''}<button class="primary small" data-refresh-live>${refreshButtonText()}</button>`;
 }
 
 async function refreshLiveData({ quiet = false } = {}) {
@@ -355,7 +375,7 @@ async function refreshLiveData({ quiet = false } = {}) {
     state.data = refreshed.data;
     state.liveData = {
       source: refreshed.source,
-      status: refreshed.source === 'live-api' ? 'live api loaded' : 'static fallback',
+      status: refreshed.source === 'live-api' ? 'updated' : 'static fallback',
       lastLoaded: new Date().toISOString(),
       error: refreshed.error || null,
       updates: refreshed.updates || 0
@@ -371,6 +391,14 @@ async function refreshLiveData({ quiet = false } = {}) {
     };
   }
   render();
+  if (state.liveData.status === 'updated') {
+    setTimeout(() => {
+      if (state.liveData.status === 'updated') {
+        state.liveData = { ...state.liveData, status: state.liveData.source === 'live-api' ? 'live api loaded' : 'static fallback' };
+        render();
+      }
+    }, 2000);
+  }
 }
 
 function favoriteMatches() {
