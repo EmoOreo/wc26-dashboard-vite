@@ -1,0 +1,10 @@
+[
+  {"name":"Mexico","code":"MEX","group":"A"},
+  {"name":"South Africa","code":"RSA","group":"A"},
+  {"name":"Canada","code":"CAN","group":"A"},
+  {"name":"Qatar","code":"QAT","group":"A"},
+  {"name":"United States","code":"USA","group":"D"},
+  {"name":"England","code":"ENG","group":"D"},
+  {"name":"Brazil","code":"BRA","group":"E"},
+  {"name":"Japan","code":"JPN","group":"E"}
+]
