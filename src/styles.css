@@ -154,3 +154,18 @@ nav { display: flex; flex-wrap: wrap; gap: 0.65rem; justify-content: flex-end; }
   .teams-line span:last-child { text-align: left; }
   .team-title-row { flex-direction: column; }
 }
+
+/* 0.5.0 polish */
+.pinned { border-color: rgba(88,220,205,.45); box-shadow: 0 0 0 1px rgba(88,220,205,.08), 0 20px 50px rgba(0,0,0,.18); }
+.group-grid, .venue-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.group-card, .venue-card { text-align: left; color: var(--text); transition: .18s ease; }
+.group-badge { width: 3rem; height: 3rem; border-radius: 1rem; display: grid; place-items: center; background: var(--accent); color: #062126; font-weight: 900; font-size: 1.6rem; margin-bottom: .85rem; }
+.mini-meta { display: flex; flex-wrap: wrap; gap: .55rem; margin-top: 1rem; }
+.mini-meta span { border: 1px solid var(--line); border-radius: 999px; padding: .35rem .65rem; color: var(--muted); background: rgba(255,255,255,.045); font-size: .85rem; }
+.detail-stack { display: grid; gap: 1rem; }
+.group-detail { max-width: none; }
+.standings-table tr.third-watch td:first-child { color: var(--warn); font-weight: 700; }
+.standings-table tr.qualify { background: rgba(88,220,205,.055); }
+.standings-table tr.third-watch { background: rgba(255,207,90,.045); }
+.venue-card h3, .group-card h3 { margin-bottom: .6rem; }
+@media (max-width: 920px) { .group-grid, .venue-grid { grid-template-columns: 1fr; } }
