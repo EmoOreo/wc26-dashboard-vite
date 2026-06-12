@@ -1,6 +1,8 @@
-Fix missing teams and groups in 0.4.1
+Upgrade dashboard to 0.5.0 Groups Venues and Polish
 
-- Add all 48 teams across Groups A-L
-- Add generated group-stage fixture coverage for all groups
-- Update public and prebuilt dist data files
-- Preserve Mexico 2-0 South Africa result
+- Add Groups tab and group detail pages
+- Add Venues tab and venue detail pages
+- Add Today/Tomorrow/Live sections on home
+- Improve standings qualification visuals and countdown labels
+- Pin favorite teams higher on the dashboard
+- Clean duplicate workflow folder artifacts
