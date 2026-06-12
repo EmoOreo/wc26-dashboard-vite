@@ -1,1 +1,1 @@
-Upgrade dashboard to 0.7.0 Live Match Center and Tournament Intelligence
+Upgrade dashboard to 0.8.0 Public Live API Data Layer
