@@ -1,11 +1,50 @@
 [
-  {"name":"Estadio Azteca","city":"Mexico City","country":"Mexico"},
-  {"name":"BMO Field","city":"Toronto","country":"Canada"},
-  {"name":"SoFi Stadium","city":"Los Angeles","country":"United States"},
-  {"name":"Estadio Akron","city":"Guadalajara","country":"Mexico"},
-  {"name":"Mercedes-Benz Stadium","city":"Atlanta","country":"United States"},
-  {"name":"NRG Stadium","city":"Houston","country":"United States"},
-  {"name":"Levi's Stadium","city":"Santa Clara","country":"United States"},
-  {"name":"BC Place","city":"Vancouver","country":"Canada"},
-  {"name":"Lumen Field","city":"Seattle","country":"United States"}
+  {
+    "name": "Estadio Azteca",
+    "city": "Mexico City"
+  },
+  {
+    "name": "BMO Field",
+    "city": "Toronto"
+  },
+  {
+    "name": "SoFi Stadium",
+    "city": "Los Angeles"
+  },
+  {
+    "name": "Estadio Akron",
+    "city": "Guadalajara"
+  },
+  {
+    "name": "MetLife Stadium",
+    "city": "New York/New Jersey"
+  },
+  {
+    "name": "BC Place",
+    "city": "Vancouver"
+  },
+  {
+    "name": "AT&T Stadium",
+    "city": "Dallas"
+  },
+  {
+    "name": "Hard Rock Stadium",
+    "city": "Miami"
+  },
+  {
+    "name": "Lumen Field",
+    "city": "Seattle"
+  },
+  {
+    "name": "Mercedes-Benz Stadium",
+    "city": "Atlanta"
+  },
+  {
+    "name": "Levi’s Stadium",
+    "city": "San Francisco Bay Area"
+  },
+  {
+    "name": "NRG Stadium",
+    "city": "Houston"
+  }
 ]

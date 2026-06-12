@@ -1,1 +1,5 @@
-{"version":"0.3.0","lastUpdated":"2026-06-12T01:30:00Z","note":"Static seeded data for WC26 Dashboard 0.3.0. Replace/refresh as official results evolve."}
+{
+  "lastUpdated": "2026-06-12T02:45:00Z",
+  "version": "0.4.1",
+  "note": "Expanded all 12 groups / 48 teams. Group fixtures are placeholder schedule data until official feed is connected."
+}
