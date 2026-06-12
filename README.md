@@ -1,36 +1,35 @@
-# WC26 Dashboard 0.2.4 Pages Fix
+# WC26 Dashboard
 
-A Vite-based World Cup 2026 dashboard foundation with clickable views, computed group standings, match detail pages, favorites, and safe loading/error states.
+Version 0.3.0 foundation for a GitHub Pages-hosted World Cup 2026 dashboard.
 
-## Important fixes in this package
+## What's included
 
-- Uses Vite with a stable pinned dependency.
-- Removes the broken lockfile that caused GitHub Actions `npm install` failures.
-- Fetches built static data from `./data/*.json`, which is correct after Vite copies `public/data` into `dist/data`.
-- Uses GitHub Actions for Pages deployment.
-- Keeps data files in `public/data`.
+- Match Center homepage with completed and upcoming matches
+- Clickable schedule cards
+- Computed group standings from finished results
+- Team cards with team-specific fixtures/results
+- Seeded Mexico 2–0 South Africa result
+- Static `dist/` deployment workflow for GitHub Pages
 
-## GitHub Pages setup
+## Deploy
 
-Use:
+This repo deploys the prebuilt `dist/` folder through GitHub Actions. GitHub Pages should be set to **GitHub Actions**.
 
-```txt
-Settings → Pages → Source: GitHub Actions
-```
-
-Then push to `main` and check the Actions tab.
-
-## Local commands
+## Local development
 
 ```bash
-npm install --no-audit --no-fund
-npm run check:data
-npm run build
+npm install
 npm run dev
 ```
 
-## Commit title
+To rebuild `dist/` locally:
 
-```txt
-Fix Vite dashboard deployment on GitHub Pages
+```bash
+npm run build
+```
+
+If npm has registry problems, reset the registry:
+
+```bash
+npm config set registry https://registry.npmjs.org/
 ```

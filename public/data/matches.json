@@ -1,6 +1,12 @@
 [
-  {"id":"1","group":"A","home":"Mexico","away":"South Africa","homeScore":2,"awayScore":0,"status":"finished","kickoff":"2026-06-11T15:00:00-04:00","venue":"Estadio Azteca"},
-  {"id":"2","group":"A","home":"Canada","away":"Qatar","homeScore":null,"awayScore":null,"status":"scheduled","kickoff":"2026-06-12T18:00:00-04:00","venue":"BMO Field"},
-  {"id":"3","group":"D","home":"United States","away":"England","homeScore":null,"awayScore":null,"status":"scheduled","kickoff":"2026-06-13T20:00:00-04:00","venue":"MetLife Stadium"},
-  {"id":"4","group":"E","home":"Brazil","away":"Japan","homeScore":null,"awayScore":null,"status":"scheduled","kickoff":"2026-06-14T17:00:00-04:00","venue":"SoFi Stadium"}
+  {"id":"m001","group":"A","stage":"Group Stage","kickoff":"2026-06-11T19:00:00Z","home":"Mexico","away":"South Africa","venue":"Estadio Azteca","city":"Mexico City","status":"finished","homeScore":2,"awayScore":0,"broadcast":"FOX / Telemundo"},
+  {"id":"m002","group":"B","stage":"Group Stage","kickoff":"2026-06-12T22:00:00Z","home":"Canada","away":"Qatar","venue":"BMO Field","city":"Toronto","status":"scheduled","broadcast":"FOX / Telemundo"},
+  {"id":"m003","group":"D","stage":"Group Stage","kickoff":"2026-06-12T01:00:00Z","home":"United States","away":"Paraguay","venue":"SoFi Stadium","city":"Los Angeles","status":"scheduled","broadcast":"FOX / Telemundo"},
+  {"id":"m004","group":"A","stage":"Group Stage","kickoff":"2026-06-12T02:00:00Z","home":"South Korea","away":"Czechia","venue":"Estadio Akron","city":"Guadalajara","status":"scheduled","broadcast":"FS1 / Telemundo"},
+  {"id":"m005","group":"A","stage":"Group Stage","kickoff":"2026-06-18T23:00:00Z","home":"Mexico","away":"South Korea","venue":"Estadio Akron","city":"Guadalajara","status":"scheduled","broadcast":"FOX / Telemundo"},
+  {"id":"m006","group":"A","stage":"Group Stage","kickoff":"2026-06-18T16:00:00Z","home":"Czechia","away":"South Africa","venue":"Mercedes-Benz Stadium","city":"Atlanta","status":"scheduled","broadcast":"FS1 / Telemundo"},
+  {"id":"m007","group":"A","stage":"Group Stage","kickoff":"2026-06-24T20:00:00Z","home":"Mexico","away":"Czechia","venue":"NRG Stadium","city":"Houston","status":"scheduled","broadcast":"FOX / Telemundo"},
+  {"id":"m008","group":"A","stage":"Group Stage","kickoff":"2026-06-24T20:00:00Z","home":"South Africa","away":"South Korea","venue":"Levi's Stadium","city":"Santa Clara","status":"scheduled","broadcast":"FS1 / Telemundo"},
+  {"id":"m009","group":"B","stage":"Group Stage","kickoff":"2026-06-13T16:00:00Z","home":"Switzerland","away":"Bosnia and Herzegovina","venue":"BC Place","city":"Vancouver","status":"scheduled","broadcast":"FS1 / Telemundo"},
+  {"id":"m010","group":"D","stage":"Group Stage","kickoff":"2026-06-19T19:00:00Z","home":"United States","away":"Australia","venue":"Lumen Field","city":"Seattle","status":"scheduled","broadcast":"FOX / Telemundo"}
 ]

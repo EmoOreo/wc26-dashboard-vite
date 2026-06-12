@@ -1,6 +1,11 @@
 [
   {"name":"Estadio Azteca","city":"Mexico City","country":"Mexico"},
   {"name":"BMO Field","city":"Toronto","country":"Canada"},
-  {"name":"MetLife Stadium","city":"East Rutherford","country":"United States"},
-  {"name":"SoFi Stadium","city":"Inglewood","country":"United States"}
+  {"name":"SoFi Stadium","city":"Los Angeles","country":"United States"},
+  {"name":"Estadio Akron","city":"Guadalajara","country":"Mexico"},
+  {"name":"Mercedes-Benz Stadium","city":"Atlanta","country":"United States"},
+  {"name":"NRG Stadium","city":"Houston","country":"United States"},
+  {"name":"Levi's Stadium","city":"Santa Clara","country":"United States"},
+  {"name":"BC Place","city":"Vancouver","country":"Canada"},
+  {"name":"Lumen Field","city":"Seattle","country":"United States"}
 ]

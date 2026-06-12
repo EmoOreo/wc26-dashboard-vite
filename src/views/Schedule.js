@@ -1,11 +1,7 @@
 import { formatMatchStatus } from '../data/format.js';
 
 export function renderSchedule(data, favorites) {
-  const groups = data.matches.reduce((acc, match) => {
-    const key = (match.kickoff || 'TBA').slice(0, 10);
-    (acc[key] ??= []).push(match);
-    return acc;
-  }, {});
+  const groups = Object.groupBy(data.matches, match => (match.kickoff || 'TBA').slice(0, 10));
   return `
     <section class="panel"><h2>Schedule</h2><p>Tap any match to open details. Star teams from the Teams page to highlight them here.</p></section>
     ${Object.entries(groups).map(([date, matches]) => `

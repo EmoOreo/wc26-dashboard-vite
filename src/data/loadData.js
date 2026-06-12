@@ -1,9 +1,9 @@
 export async function loadData() {
   const [matches, teams, venues, meta] = await Promise.all([
-    fetchJson('./data/matches.json'),
-    fetchJson('./data/teams.json'),
-    fetchJson('./data/venues.json'),
-    fetchJson('./data/meta.json')
+    fetchJson('./public/data/matches.json'),
+    fetchJson('./public/data/teams.json'),
+    fetchJson('./public/data/venues.json'),
+    fetchJson('./public/data/meta.json')
   ]);
   return { matches, teams, venues, meta };
 }

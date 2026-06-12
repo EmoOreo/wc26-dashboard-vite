@@ -1,5 +1,3 @@
-import './styles.css';
-
 const state = {
   tab: location.hash.replace('#', '') || 'overview',
   data: { matches: [], teams: [], venues: [], meta: {} },
