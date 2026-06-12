@@ -1,4 +1,5 @@
 import './styles.css';
+import { refreshFromLiveApi } from './data/liveProvider.js';
 
 const STORAGE_KEY = 'wc26_favorites_v1';
 const GROUP_STAGE_MATCHES = 72;
@@ -12,14 +13,15 @@ const state = {
   matchId: null,
   team: null,
   venue: null,
-  favorites: loadFavorites()
+  favorites: loadFavorites(),
+  liveData: { source: 'static', status: 'static fallback', lastLoaded: null, error: null, updates: 0 }
 };
 
 const app = document.querySelector('#app');
 const navTabs = ['overview', 'schedule', 'standings', 'groups', 'teams', 'venues', 'bracket'];
 
-async function loadJson(path) {
-  const response = await fetch(`./data/${path}`);
+async function loadJson(path, cacheBust = false) {
+  const response = await fetch(`./data/${path}${cacheBust ? `?v=${Date.now()}` : ''}`);
   if (!response.ok) throw new Error(`Could not load ${path}`);
   return response.json();
 }
@@ -36,7 +38,13 @@ function toggleFavorite(team) {
   render();
 }
 
-function tournamentToday() { return new Date('2026-06-11T12:00:00Z'); }
+function tournamentToday() {
+  const now = new Date();
+  const tournamentStart = new Date('2026-06-11T00:00:00Z');
+  const tournamentEnd = new Date('2026-07-20T00:00:00Z');
+  if (now >= tournamentStart && now <= tournamentEnd) return now;
+  return new Date('2026-06-11T12:00:00Z');
+}
 function startOfDay(date) { const d = new Date(date); d.setHours(0,0,0,0); return d; }
 function sameDay(iso, date) { return startOfDay(new Date(iso)).getTime() === startOfDay(date).getTime(); }
 function addDays(date, days) { const d = new Date(date); d.setDate(d.getDate() + days); return d; }
@@ -245,7 +253,12 @@ function shell(content) {
   app.innerHTML = `
     <header class="topbar">
       <div><div class="eyebrow">World Cup 2026</div><h1>WC26 Dashboard</h1></div>
-      <nav>${navTabs.map(tab => `<button class="pill ${state.tab === tab ? 'active' : ''}" data-tab="${tab}">${label(tab)}</button>`).join('')}</nav>
+      <div class="topbar-actions">
+        <button class="refresh-pill ${state.liveData.source === 'live-api' ? 'live-source' : ''}" data-refresh-live>
+          ${state.liveData.source === 'live-api' ? 'Live API' : 'Static fallback'} · Refresh
+        </button>
+        <nav>${navTabs.map(tab => `<button class="pill ${state.tab === tab ? 'active' : ''}" data-tab="${tab}">${label(tab)}</button>`).join('')}</nav>
+      </div>
     </header>
     <main class="page">${content}</main>
   `;
@@ -317,9 +330,47 @@ function overview() {
       <article class="card"><div class="section-row"><h3>Tomorrow</h3><button class="secondary small" data-action="schedule">Schedule</button></div><div class="match-list">${tomorrow.slice(0, 5).map(matchCard).join('') || '<p class="muted">No matches tomorrow.</p>'}</div></article>
       <article class="card"><div class="section-row"><h3>Recently finished</h3><button class="secondary small" data-action="schedule">All fixtures</button></div><div class="match-list">${finished.slice(0, 4).map(matchCard).join('') || '<p class="muted">No completed matches yet.</p>'}</div></article>
       <article class="card wide"><div class="section-row"><h3>Best third-place table</h3><button class="secondary small" data-action="bracket">Full tracker</button></div>${thirdPlaceTableMini(tables)}</article>
-      <article class="card"><h3>Data status</h3><p class="result-line">Static data loaded successfully</p><p class="muted">Last data update: ${meta.lastUpdated ? new Date(meta.lastUpdated).toLocaleString() : 'unknown'}</p></article>
+      <article class="card"><h3>Data status</h3>${dataStatusPanel(meta)}</article>
     </section>
   `;
+}
+
+
+function dataStatusPanel(meta) {
+  const live = state.liveData;
+  const sourceLabel = live.source === 'live-api' ? 'Public live API' : 'Committed static JSON';
+  const loadedAt = live.lastLoaded ? new Date(live.lastLoaded).toLocaleString() : 'not refreshed this session';
+  const apiLine = live.source === 'live-api'
+    ? `${live.updates} match records refreshed from worldcup26.ir` 
+    : 'Using bundled data until the public API responds.';
+  return `<p class="result-line">${sourceLabel}</p><p class="muted">${apiLine}</p><p class="muted">Last loaded: ${loadedAt}</p>${live.error ? `<p class="api-warning">${live.error}</p>` : ''}<button class="primary small" data-refresh-live>Refresh live data</button>`;
+}
+
+async function refreshLiveData({ quiet = false } = {}) {
+  state.liveData = { ...state.liveData, status: 'refreshing', error: null };
+  if (!quiet) render();
+  try {
+    const localData = state.data;
+    const refreshed = await refreshFromLiveApi(localData);
+    state.data = refreshed.data;
+    state.liveData = {
+      source: refreshed.source,
+      status: refreshed.source === 'live-api' ? 'live api loaded' : 'static fallback',
+      lastLoaded: new Date().toISOString(),
+      error: refreshed.error || null,
+      updates: refreshed.updates || 0
+    };
+  } catch (error) {
+    state.liveData = {
+      ...state.liveData,
+      source: 'static',
+      status: 'static fallback',
+      lastLoaded: new Date().toISOString(),
+      error: `Live refresh failed: ${error.message}`,
+      updates: 0
+    };
+  }
+  render();
 }
 
 function favoriteMatches() {
@@ -426,6 +477,7 @@ function bind() {
   document.querySelectorAll('[data-group]').forEach(btn => btn.addEventListener('click', () => { state.group = btn.dataset.group; state.tab = 'group'; render(); }));
   document.querySelectorAll('[data-venue]').forEach(btn => btn.addEventListener('click', () => { state.venue = btn.dataset.venue; state.tab = 'venue'; render(); }));
   document.querySelectorAll('[data-favorite]').forEach(btn => btn.addEventListener('click', (event) => { event.stopPropagation(); toggleFavorite(btn.dataset.favorite); }));
+  document.querySelectorAll('[data-refresh-live]').forEach(btn => btn.addEventListener('click', () => refreshLiveData()));
   const search = document.querySelector('#search'); if (search) search.addEventListener('input', e => { state.query = e.target.value; render(); });
   const group = document.querySelector('#groupFilter'); if (group) group.addEventListener('change', e => { state.group = e.target.value; render(); });
 }
@@ -448,8 +500,10 @@ function render() {
 
 async function init() {
   try {
-    const [matches, teams, venues, meta] = await Promise.all([loadJson('matches.json'), loadJson('teams.json'), loadJson('venues.json'), loadJson('meta.json')]);
-    state.data = { matches, teams, venues, meta }; render();
+    const [matches, teams, venues, meta] = await Promise.all([loadJson('matches.json', true), loadJson('teams.json', true), loadJson('venues.json', true), loadJson('meta.json', true)]);
+    state.data = { matches, teams, venues, meta };
+    render();
+    refreshLiveData({ quiet: true });
   } catch (error) { shell(`<section class="card"><h2>Dashboard data failed to load</h2><p>${error.message}</p></section>`); }
 }
 init();
