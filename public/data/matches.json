@@ -1,0 +1,6 @@
+[
+  {"id":"1","group":"A","home":"Mexico","away":"South Africa","homeScore":2,"awayScore":0,"status":"finished","kickoff":"2026-06-11T15:00:00-04:00","venue":"Estadio Azteca"},
+  {"id":"2","group":"A","home":"Canada","away":"Qatar","homeScore":null,"awayScore":null,"status":"scheduled","kickoff":"2026-06-12T18:00:00-04:00","venue":"BMO Field"},
+  {"id":"3","group":"D","home":"United States","away":"England","homeScore":null,"awayScore":null,"status":"scheduled","kickoff":"2026-06-13T20:00:00-04:00","venue":"MetLife Stadium"},
+  {"id":"4","group":"E","home":"Brazil","away":"Japan","homeScore":null,"awayScore":null,"status":"scheduled","kickoff":"2026-06-14T17:00:00-04:00","venue":"SoFi Stadium"}
+]
