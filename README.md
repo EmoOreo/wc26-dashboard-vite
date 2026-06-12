@@ -1,35 +1,38 @@
 # WC26 Dashboard
 
-Version 0.3.0 foundation for a GitHub Pages-hosted World Cup 2026 dashboard.
+Version **0.4.0** — Match Center, computed standings, team pages, and local favorites.
 
-## What's included
+## Current Features
 
-- Match Center homepage with completed and upcoming matches
-- Clickable schedule cards
-- Computed group standings from finished results
-- Team cards with team-specific fixtures/results
-- Seeded Mexico 2–0 South Africa result
-- Static `dist/` deployment workflow for GitHub Pages
+- GitHub Pages deployment from the prebuilt `dist/` folder.
+- Match Center home dashboard with recently finished and upcoming matches.
+- Clickable schedule cards and match detail pages.
+- Computed group standings from finished match results.
+- Clickable teams with group rank, points, next match, latest result, and full fixture list.
+- Local favorite teams saved in browser `localStorage`.
+- Schedule filter for favorite teams.
+- Seeded Mexico 2–0 South Africa result.
 
-## Deploy
-
-This repo deploys the prebuilt `dist/` folder through GitHub Actions. GitHub Pages should be set to **GitHub Actions**.
-
-## Local development
+## Local Build
 
 ```bash
 npm install
-npm run dev
-```
-
-To rebuild `dist/` locally:
-
-```bash
 npm run build
 ```
 
-If npm has registry problems, reset the registry:
+The deployment workflow publishes `dist/` directly, so keep `dist/` committed.
 
-```bash
-npm config set registry https://registry.npmjs.org/
-```
+## Deploy
+
+Use GitHub Pages with **Source: GitHub Actions**.
+
+## Release Notes
+
+### 0.4.0
+
+- Added favorites system.
+- Added My Teams dashboard section.
+- Added enhanced team detail pages.
+- Added group-rank and points display on team cards.
+- Added favorite-team schedule filtering.
+- Improved home dashboard structure.

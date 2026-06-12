@@ -1,9 +1,10 @@
-Upgrade dashboard to 0.3.0 Match Center and Standings
+Upgrade dashboard to 0.4.0 Teams and Favorites
 
-- Replace placeholder landing page with match center dashboard
-- Add completed, upcoming, and featured match sections
-- Add clickable schedule cards and match detail view
-- Compute group standings from finished match results
-- Add team cards and team fixture detail views
-- Seed Mexico 2-0 South Africa result into Group A
-- Keep GitHub Pages deployment on prebuilt dist output
+- Add local favorite team system
+- Add My Teams dashboard section
+- Add clickable team profile pages
+- Show group rank, points, goal difference, and played matches per team
+- Add next match and latest result blocks to team pages
+- Add favorite-team schedule filtering
+- Improve match center home layout
+- Keep prebuilt dist output for GitHub Pages deployment
